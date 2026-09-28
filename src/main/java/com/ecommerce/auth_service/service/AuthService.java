@@ -12,6 +12,14 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
 
     public AuthResponse register(String email, String password) {
+        var accountDto = accountService.register(email, password);
+
+
+        /*return new AuthResponse(
+                accountDto,
+                ,
+
+        );*/
         return null;
     }
 

@@ -2,6 +2,7 @@ package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.exceptions.ConflictException;
+import com.ecommerce.auth_service.mapper.AccountMapper;
 import com.ecommerce.auth_service.model.Account;
 import com.ecommerce.auth_service.model.Role;
 import com.ecommerce.auth_service.repository.AccountRepository;
@@ -29,15 +30,7 @@ public class AccountService {
 
         Account savedAccount = accountRepository.save(createAccount);
 
-
-
-
-
-
-
-
-
-            return null;
+        return AccountMapper.mapToDto(savedAccount);
     }
 
     public AccountDto login(String email, String password) {
