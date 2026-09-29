@@ -7,16 +7,18 @@ import com.ecommerce.auth_service.model.Account;
 import com.ecommerce.auth_service.model.Role;
 import com.ecommerce.auth_service.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AccountDto register(String email, String password) {
+    public Account register(String email, String password) {
         if (accountRepository.existsByEmail(email)) {
             throw new ConflictException("email already exists");
         }
@@ -29,8 +31,8 @@ public class AccountService {
         createAccount.setEnabled(false);
 
         Account savedAccount = accountRepository.save(createAccount);
-
-        return AccountMapper.mapToDto(savedAccount);
+        log.info("Зарегистрирован непдтвержденный аккаунт с id = {}", savedAccount.getId());
+        return savedAccount;
     }
 
     public AccountDto login(String email, String password) {

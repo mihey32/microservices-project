@@ -1,6 +1,7 @@
 package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.dto.AccountDto;
+import com.ecommerce.auth_service.model.Account;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
@@ -29,7 +30,7 @@ public class JwtService {
         this.accessExpiration = accessExpiration;
     }
 
-    public String generateToken(AccountDto account) {
+    public String generateToken(Account account) {
         final Date expiration = new Date(System.currentTimeMillis() + accessExpiration);
         return Jwts.builder()
                 .subject(account.getEmail())

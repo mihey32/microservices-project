@@ -1,5 +1,6 @@
 package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.mapper.AccountMapper;
 import com.ecommerce.auth_service.model.AuthResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,15 +13,15 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
 
     public AuthResponse register(String email, String password) {
-        var accountDto = accountService.register(email, password);
+        var account = accountService.register(email, password);
+        String accessToken = jwtService.generateToken(account);
+        String refreshToken = refreshTokenService.generateRefreshToken(account);
 
-
-        /*return new AuthResponse(
-                accountDto,
-                ,
-
-        );*/
-        return null;
+        return new AuthResponse(
+                AccountMapper.mapToDto(account),
+                accessToken,
+                refreshToken
+        );
     }
 
     public AuthResponse login(String email, String password) {
