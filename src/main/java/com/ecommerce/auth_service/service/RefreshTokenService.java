@@ -42,7 +42,6 @@ public class RefreshTokenService {
         createRefreshToken.setRevoked(false);
 
         refreshTokenRepository.save(createRefreshToken);
-        log.info("сгенерирован refresh token");
         return token;
     }
 
@@ -55,7 +54,6 @@ public class RefreshTokenService {
     public void revokeRefreshToken(RefreshToken refreshToken) {
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
-        log.info("refresh token аннулирован у пользователя с id = {}", refreshToken.getAccount().getId());
     }
 
     private String hashToken(String token) {

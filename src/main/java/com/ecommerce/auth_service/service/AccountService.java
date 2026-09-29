@@ -31,7 +31,6 @@ public class AccountService {
         createAccount.setEnabled(false);
 
         Account savedAccount = accountRepository.save(createAccount);
-        log.info("Зарегистрирован непдтвержденный аккаунт с id = {}", savedAccount.getId());
         return savedAccount;
     }
 
