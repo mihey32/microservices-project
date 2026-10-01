@@ -18,7 +18,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public Account register(String email, String password) {
+    public AccountDto register(String email, String password) {
         if (accountRepository.existsByEmail(email)) {
             throw new ConflictException("email already exists");
         }
@@ -27,11 +27,11 @@ public class AccountService {
         Account createAccount = new Account();
         createAccount.setEmail(email);
         createAccount.setPasswordHash(passwordHash);
-        createAccount.setRole(Role.USER);
-        createAccount.setEnabled(false);
+        createAccount.setRole(Role.ROLE_USER);
 
         Account savedAccount = accountRepository.save(createAccount);
-        return savedAccount;
+        log.info("Account created: id={}", savedAccount.getId());
+        return AccountMapper.mapToDto(savedAccount);
     }
 
     public AccountDto login(String email, String password) {

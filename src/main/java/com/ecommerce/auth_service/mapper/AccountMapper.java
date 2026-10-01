@@ -6,13 +6,13 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class AccountMapper {
-    public static AccountDto mapToDto(Account account) {
-        AccountDto dto = new AccountDto();
-        dto.setId(account.getId());
-        dto.setEmail(account.getEmail());
-        dto.setRole(account.getRole());
-        dto.setEnabled(account.isEnabled());
 
-        return dto;
+    public AccountDto mapToDto(Account account) {
+        return new AccountDto(
+                account.getId(),
+                account.getEmail(),
+                account.getRole(),
+                account.isBlocked(),
+                account.isEmailVerified());
     }
 }
