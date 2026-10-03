@@ -1,19 +1,20 @@
 package com.ecommerce.auth_service.service;
 
-import com.ecommerce.auth_service.model.Account;
+import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.model.RefreshToken;
 import com.ecommerce.auth_service.repository.RefreshTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,39 +23,58 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
-    private final long refreshExpiration;
+    private final Duration refreshExpiration;
 
 
     public RefreshTokenService(RefreshTokenRepository refreshTokenRepository,
-                               @Value("${jwt.refresh.expiration}") long refreshExpiration) {
+                               @Value("${jwt.refresh.expiration}") Duration refreshExpiration) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.refreshExpiration = refreshExpiration;
     }
 
-    public String generateRefreshToken(Account account) {
+    public String generateRefreshToken(AccountDto account) {
         String token = UUID.randomUUID().toString();
         String hashedToken = hashToken(token);
 
         RefreshToken createRefreshToken = new RefreshToken();
-        createRefreshToken.setToken(hashedToken);
-        createRefreshToken.setAccount(account);
-        createRefreshToken.setExpiresAt(LocalDateTime.now().plus(refreshExpiration, ChronoUnit.MILLIS));
-        createRefreshToken.setRevoked(false);
+        createRefreshToken.setTokenHash(hashedToken);
+        createRefreshToken.setAccountId(account.id());
+        createRefreshToken.setExpiresAt(Instant.now().plus(refreshExpiration));
 
         refreshTokenRepository.save(createRefreshToken);
         return token;
     }
 
-    public Optional<RefreshToken> validateRefreshToken(String token) {
-        return refreshTokenRepository.findByToken(hashToken(token))
-                .filter(refreshToken -> !refreshToken.isRevoked())
-                .filter(refreshToken -> refreshToken.getExpiresAt().isAfter(LocalDateTime.now()));
+    @Transactional
+    public Optional<Long> consume(String token) {
+        String hash = hashToken(token);
+
+        int updated = refreshTokenRepository.consumeIfActive(hash, Instant.now());
+        if (updated == 0) {
+            log.debug("Refresh token invalid, expired or already consumed");
+            return Optional.empty();
+        }
+        return refreshTokenRepository.findAccountIdByTokenHash(hash);
     }
 
-    public void revokeRefreshToken(RefreshToken refreshToken) {
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
+    @Transactional
+    public void revokeByToken(String rawToken) {
+        String hash = hashToken(rawToken);
+        int revoked = refreshTokenRepository.revokeByTokenHash(hash);
+
+        if (revoked == 0) {
+            log.warn("Attempt to revoke non-existent or already revoked token");
+        } else {
+            log.debug("Refresh token revoked");
+        }
     }
+
+    @Transactional
+    public void revokeAllByAccountId(Long accountId) {
+        int revoked = refreshTokenRepository.revokeAllByAccountId(accountId);
+        log.info("Revoked {} refresh tokens for account with id={}", revoked, accountId);
+    }
+
 
     private String hashToken(String token) {
         try {

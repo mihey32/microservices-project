@@ -23,14 +23,14 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AccountDto> register(@RequestBody @Valid RegisterRequest request) {
-        log.info("Register attempt for email={}", request.email());
+        log.debug("Register attempt for email={}", request.email());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(authService.register(request));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
-        log.info("login attempt for email={}", request.email());
+        log.debug("login attempt for email={}", request.email());
         return ResponseEntity.status(HttpStatus.OK)
                 .body(authService.login(request));
     }
