@@ -4,6 +4,8 @@ import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.dto.LoginRequest;
 import com.ecommerce.auth_service.dto.RegisterRequest;
 import com.ecommerce.auth_service.dto.AuthResponse;
+import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
+import com.ecommerce.auth_service.exceptions.InvalidRefreshTokenException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,5 +32,14 @@ public class AuthService {
 
     public AuthResponse oauthLogin(String oauth2Provider, String providerId, String email) {
         return null;
+    }
+
+    public AuthResponse refresh(String refreshToken) {
+        Long accountId = refreshTokenService.consume(refreshToken)
+                .orElseThrow(() -> new InvalidRefreshTokenException("invalid refresh token"));
+
+
+
+        return null; //заглушка
     }
 }

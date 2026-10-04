@@ -78,6 +78,10 @@ public class AccountService {
         return accountRepository.findByEmail(email);
     }
 
+    private Optional<Account> findById(Long id) {
+        return accountRepository.findById(id);
+    }
+
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
