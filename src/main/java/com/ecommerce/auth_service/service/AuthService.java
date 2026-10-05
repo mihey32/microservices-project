@@ -66,6 +66,11 @@ public class AuthService {
         return new AuthResponse(account, refreshToken, accessToken);
     }
 
+    public void logout(RefreshRequest refreshRequest) {
+        refreshTokenService.revokeByToken(refreshRequest.refreshToken());
+        log.debug("Logout success");
+    }
+
 
     private void assertNotBlocked(AccountDto account) {
         if (account.blocked()) {
@@ -80,4 +85,6 @@ public class AuthService {
             throw new EmailNotConfirmedException("email is not verified");
         }
     }
+
+
 }

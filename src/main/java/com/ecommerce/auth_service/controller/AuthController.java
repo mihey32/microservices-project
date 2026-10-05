@@ -43,8 +43,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public void logout() {
-
+    public ResponseEntity<Void> logout(@RequestBody @Valid RefreshRequest refreshRequest) {
+        log.debug("Logout attempt");
+        authService.logout(refreshRequest);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
     }
 
     @PostMapping("/verify-email")
