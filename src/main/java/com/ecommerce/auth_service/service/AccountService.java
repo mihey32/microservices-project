@@ -43,7 +43,7 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
-    public AccountDto login(String email, String password) {
+    public AccountDto authenticate(String email, String password) {
         String normalizedEmail = normalizeEmail(email);
         Account signinAccount = findByEmail(normalizedEmail)
                 .orElseThrow(() -> {
@@ -56,17 +56,6 @@ public class AccountService {
             log.info("Invalid credentials attempt: email={}", normalizedEmail);
             throw new InvalidCredentialsException("invalid email or password");
         }
-
-        if (signinAccount.isBlocked()) {
-            log.info("Attempt to log in to a blocked account: email={}", normalizedEmail);
-            throw new AccountBlockedException("account is blocked");
-        }
-
-        if (!signinAccount.isEmailVerified()) {
-            log.info("Attempt to log in with unconfirmed email: email={}", normalizedEmail);
-            throw new EmailNotConfirmedException("email is not verified");
-        }
-
         return AccountMapper.mapToDto(signinAccount);
     }
 
@@ -74,12 +63,12 @@ public class AccountService {
         return null;
     }
 
-    private Optional<Account> findByEmail(String email) {
-        return accountRepository.findByEmail(email);
+    public Optional<AccountDto> findById(Long id) {
+        return accountRepository.findById(id).map(AccountMapper::mapToDto);
     }
 
-    private Optional<Account> findById(Long id) {
-        return accountRepository.findById(id);
+    private Optional<Account> findByEmail(String email) {
+        return accountRepository.findByEmail(email);
     }
 
     private String normalizeEmail(String email) {

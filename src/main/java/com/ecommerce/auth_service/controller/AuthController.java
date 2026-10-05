@@ -2,8 +2,9 @@ package com.ecommerce.auth_service.controller;
 
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.dto.AuthResponse;
-import com.ecommerce.auth_service.dto.LoginRequest;
-import com.ecommerce.auth_service.dto.RegisterRequest;
+import com.ecommerce.auth_service.dto.request.LoginRequest;
+import com.ecommerce.auth_service.dto.request.RefreshRequest;
+import com.ecommerce.auth_service.dto.request.RegisterRequest;
 import com.ecommerce.auth_service.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,14 +31,15 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
-        log.debug("login attempt for email={}", request.email());
+        log.debug("Login attempt for email={}", request.email());
         return ResponseEntity.status(HttpStatus.OK)
                 .body(authService.login(request));
     }
 
     @PostMapping("/refresh")
-    public AuthResponse refresh(String refreshToken) {
-        return null;
+    public ResponseEntity<AuthResponse> refresh(@RequestBody @Valid RefreshRequest refreshRequest) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(authService.refresh(refreshRequest));
     }
 
     @PostMapping("/logout")
