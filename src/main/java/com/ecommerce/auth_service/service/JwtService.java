@@ -32,12 +32,22 @@ public class JwtService {
                 .subject(account.email())
                 .expiration(expiration)
                 .signWith(jwtAccessSecret)
+                .claim("id", account.id())
                 .claim("role", account.role())
                 .compact();
     }
 
     public String extractEmail(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    public Long extractId(String token) {
+        Number id = parseClaims(token).get("id", Number.class);
+        return id == null ? null : id.longValue();
+    }
+
+    public String extractRole(String token) {
+        return parseClaims(token).get("role", String.class);
     }
 
     public boolean isTokenValid(String token) {
