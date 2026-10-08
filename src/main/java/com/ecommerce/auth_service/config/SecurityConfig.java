@@ -1,5 +1,7 @@
 package com.ecommerce.auth_service.config;
 
+import com.ecommerce.auth_service.security.JsonAccessDeniedHandler;
+import com.ecommerce.auth_service.security.JsonAuthenticationEntryPoint;
 import com.ecommerce.auth_service.security.JwtAuthenticationFilter;
 import com.ecommerce.auth_service.service.JwtService;
 import org.springframework.context.annotation.Bean;
@@ -29,13 +31,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService) {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           JwtService jwtService,
+                                           JsonAuthenticationEntryPoint authenticationEntryPoint,
+                                           JsonAccessDeniedHandler accessDeniedHandler) {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicEndpoints).permitAll()
                         .requestMatchers(systemEndpoints).permitAll()
