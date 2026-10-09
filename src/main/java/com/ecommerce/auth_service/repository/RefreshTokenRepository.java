@@ -27,11 +27,11 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 
     @Modifying
     @Query("update RefreshToken rt set rt.revoked = true " +
-    "where rt.tokenHash = :hash and rt.revoked = false and rt.expiresAt > :now")
-    int consumeIfActive(String hash, Instant now);
+            "where rt.tokenHash = :hash and rt.revoked = false and rt.expiresAt > :now")
+    int consumeIfActive(@Param("hash") String hash, @Param("now") Instant now);
 
     @Modifying
     @Query("select rt.accountId from RefreshToken rt where rt.tokenHash = :hash")
-    Optional<Long> findAccountIdByTokenHash(String hash);
+    Optional<Long> findAccountIdByTokenHash(@Param("hash") String hash);
 
 }
