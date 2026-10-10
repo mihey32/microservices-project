@@ -1,6 +1,10 @@
-package com.ecommerce.auth_service.exceptions;
+package com.ecommerce.auth_service.exceptions.Handler;
 
 import com.ecommerce.auth_service.dto.ErrorResponseDto;
+import com.ecommerce.auth_service.exceptions.AccountBlockedException;
+import com.ecommerce.auth_service.exceptions.ConflictException;
+import com.ecommerce.auth_service.exceptions.EmailNotConfirmedException;
+import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
