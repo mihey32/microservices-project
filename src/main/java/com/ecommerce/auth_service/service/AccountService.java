@@ -63,9 +63,26 @@ public class AccountService {
         return null;
     }
 
-    public Optional<AccountDto> findById(Long id) {
+    public Optional<AccountDto> findAccountById(Long id) {
         return accountRepository.findById(id).map(AccountMapper::mapToDto);
     }
+
+    @Transactional
+    public void changePassword(Long accountId, String rawPassword) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> {
+                    log.debug("Account not found: accountId={}", accountId);
+                    return new InvalidCredentialsException("account not found");
+                });
+        String newPasswordHash = passwordEncoder.encode(rawPassword);
+        account.setPasswordHash(newPasswordHash);
+        log.debug("Password changed: accountId={}", accountId);
+    }
+
+    public Optional<AccountDto> findAccountByEmail(String email) {
+        return accountRepository.findByEmail(normalizeEmail(email)).map(AccountMapper::mapToDto);
+    }
+
 
     private Optional<Account> findByEmail(String email) {
         return accountRepository.findByEmail(email);

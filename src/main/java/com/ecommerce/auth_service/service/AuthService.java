@@ -1,13 +1,9 @@
 package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.dto.AccountDto;
-import com.ecommerce.auth_service.dto.request.LoginRequest;
-import com.ecommerce.auth_service.dto.request.RefreshRequest;
-import com.ecommerce.auth_service.dto.request.RegisterRequest;
+import com.ecommerce.auth_service.dto.request.*;
 import com.ecommerce.auth_service.dto.AuthResponse;
-import com.ecommerce.auth_service.exceptions.AccountBlockedException;
-import com.ecommerce.auth_service.exceptions.EmailNotConfirmedException;
-import com.ecommerce.auth_service.exceptions.InvalidRefreshTokenException;
+import com.ecommerce.auth_service.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +16,7 @@ public class AuthService {
     private final AccountService accountService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetService resetService;
 
     public AccountDto register(RegisterRequest request) {
         return accountService.register(request.email(), request.password());
@@ -50,7 +47,7 @@ public class AuthService {
                     return new InvalidRefreshTokenException("invalid refresh token");
                 });
 
-        AccountDto account = accountService.findById(accountId)
+        AccountDto account = accountService.findAccountById(accountId)
                 .orElseThrow(() -> {
                     log.debug("Refresh token points to non-existent account: accountId={}", accountId);
                     return new InvalidRefreshTokenException("invalid refresh token");
@@ -69,6 +66,25 @@ public class AuthService {
     public void logout(RefreshRequest refreshRequest) {
         refreshTokenService.revokeByToken(refreshRequest.refreshToken());
         log.debug("Logout success");
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        accountService.findAccountByEmail(request.email())
+                .ifPresent(accountDto -> {
+                    resetService.invalidatePreviousTokens(accountDto.id());
+                    String rawToken = resetService.generateResetToken(accountDto);
+                    //здесь должно быть событие kafkа
+                });
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        Long accountId = resetService.consumeResetToken(request.token())
+                .orElseThrow(() -> new InvalidResetTokenException("invalid or expired reset token"));
+        accountService.changePassword(accountId, request.newPassword());
+        refreshTokenService.revokeAllByAccountId(accountId);
+        log.info("Reset password: accountId={}", accountId);
     }
 
 
