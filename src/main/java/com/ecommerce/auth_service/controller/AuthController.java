@@ -2,9 +2,7 @@ package com.ecommerce.auth_service.controller;
 
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.dto.AuthResponse;
-import com.ecommerce.auth_service.dto.request.LoginRequest;
-import com.ecommerce.auth_service.dto.request.RefreshRequest;
-import com.ecommerce.auth_service.dto.request.RegisterRequest;
+import com.ecommerce.auth_service.dto.request.*;
 import com.ecommerce.auth_service.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +53,20 @@ public class AuthController {
         return null;
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        log.debug("Forgot password attempt");
+        authService.forgotPassword(request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
+    }
 
-    // /forgot-password, /reset-password, /oauth2/
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        log.debug("Reset password attempt");
+        authService.resetPassword(request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
+    }
+
 }
