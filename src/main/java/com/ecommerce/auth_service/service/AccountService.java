@@ -72,12 +72,28 @@ public class AccountService {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> {
                     log.debug("Account not found: accountId={}", accountId);
-                    return new InvalidCredentialsException("account not found");
+                    return new InvalidResetTokenException("account not found");
                 });
         String newPasswordHash = passwordEncoder.encode(rawPassword);
         account.setPasswordHash(newPasswordHash);
         log.debug("Password changed: accountId={}", accountId);
     }
+
+    @Transactional
+    public void markEmailVerified(Long accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> {
+                    log.debug("Account not found: accountId={}", accountId);
+                    return new InvalidVerificationTokenException("account not found");
+                });
+        if (account.isEmailVerified()) {
+            log.debug("Email already verified: accountId={}", accountId);
+            return;
+        }
+        account.setEmailVerified(true);
+        log.debug("Email verified: accountId={}", accountId);
+    }
+
 
     public Optional<AccountDto> findAccountByEmail(String email) {
         return accountRepository.findByEmail(normalizeEmail(email)).map(AccountMapper::mapToDto);
