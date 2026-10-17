@@ -17,9 +17,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService resetService;
+    private final EmailVerificationService emailVerificationService;
 
+    @Transactional
     public AccountDto register(RegisterRequest request) {
-        return accountService.register(request.email(), request.password());
+        AccountDto accountDto = accountService.register(request.email(), request.password());
+        String verificationToken = emailVerificationService.generateVerificationToken(accountDto);
+        // TODO: publish user.created event to Kafka
+        log.debug("DEV ONLY - verification token for {} = {}", accountDto.id(), verificationToken);
+        return accountDto;
     }
 
     public AuthResponse login(LoginRequest loginRequest) {
@@ -33,6 +39,17 @@ public class AuthService {
 
         log.info("Login success: accountId={}", account.id());
         return new AuthResponse(account, refreshToken, accessToken);
+    }
+
+    @Transactional
+    public void verifyEmail(VerifyEmailRequest request) {
+        Long accountId = emailVerificationService.consumeVerificationToken(request.token())
+                .orElseThrow(() -> {
+                    log.debug("Email verification token invalid, expired or already used");
+                    return new InvalidVerificationTokenException("invalid or expired verification token");
+                });
+        accountService.markEmailVerified(accountId);
+        log.info("Email verified: accountId={}", accountId);
     }
 
     public AuthResponse oauthLogin(String oauth2Provider, String providerId, String email) {
@@ -74,7 +91,8 @@ public class AuthService {
                 .ifPresent(accountDto -> {
                     resetService.invalidatePreviousTokens(accountDto.id());
                     String rawToken = resetService.generateResetToken(accountDto);
-                    //здесь должно быть событие kafkа
+                    log.debug("DEV ONLY - reset token for {} = {}", accountDto.id(), rawToken);
+                    // TODO: publish event to Kafka
                 });
     }
 

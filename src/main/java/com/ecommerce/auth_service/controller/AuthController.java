@@ -49,8 +49,11 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public AuthResponse verifyEmail(String email) {
-        return null;
+    public ResponseEntity<Void>  verifyEmail(@RequestBody @Valid VerifyEmailRequest request) {
+        log.debug("Verify email attempt");
+        authService.verifyEmail(request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
     }
 
     @PostMapping("/forgot-password")
