@@ -94,6 +94,20 @@ public class AccountService {
         log.debug("Email verified: accountId={}", accountId);
     }
 
+    @Transactional(readOnly = true)
+    public boolean verifyPassword(Long accountId, String rawPassword) {
+        Optional<Account> accountOptional = accountRepository.findById(accountId);
+        if (accountOptional.isEmpty()) {
+            return false;
+        }
+
+        Account account = accountOptional.get();
+        if (account.getPasswordHash() == null) {
+            return false;
+        }
+        return passwordEncoder.matches(rawPassword, account.getPasswordHash());
+    }
+
 
     public Optional<AccountDto> findAccountByEmail(String email) {
         return accountRepository.findByEmail(normalizeEmail(email)).map(AccountMapper::mapToDto);

@@ -57,6 +57,29 @@ public class AuthService {
     }
 
     @Transactional
+    public void changePassword(ChangePasswordRequest request, String email) {
+        AccountDto accountDto = accountService.findAccountByEmail(email)
+                .orElseThrow(() -> {
+                    log.debug("Account not found");
+                    return new InvalidCredentialsException("account not found");
+                });
+        Long accountId = accountDto.id();
+
+        if (!accountService.verifyPassword(accountId, request.oldPassword())) {
+            log.debug("Invalid old password");
+            throw new InvalidCredentialsException("invalid credentials");
+        }
+
+        if (request.oldPassword().equals(request.newPassword())) {
+            throw new InvalidCredentialsException("new password must differ from old");
+        }
+
+        accountService.changePassword(accountId, request.newPassword());
+        refreshTokenService.revokeAllByAccountId(accountId);
+        log.info("Password changed: accountId={}", accountId);
+    }
+
+    @Transactional
     public AuthResponse refresh(RefreshRequest refreshRequest) {
         Long accountId = refreshTokenService.consume(refreshRequest.refreshToken())
                 .orElseThrow(() -> {
@@ -82,7 +105,6 @@ public class AuthService {
 
     public void logout(RefreshRequest refreshRequest) {
         refreshTokenService.revokeByToken(refreshRequest.refreshToken());
-        log.debug("Logout success");
     }
 
     @Transactional

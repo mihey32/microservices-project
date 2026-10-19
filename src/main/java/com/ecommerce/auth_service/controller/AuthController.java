@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +50,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<Void>  verifyEmail(@RequestBody @Valid VerifyEmailRequest request) {
+    public ResponseEntity<Void> verifyEmail(@RequestBody @Valid VerifyEmailRequest request) {
         log.debug("Verify email attempt");
         authService.verifyEmail(request);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
@@ -68,6 +69,16 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
         log.debug("Reset password attempt");
         authService.resetPassword(request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest,
+                                               Authentication authentication) {
+        log.debug("Change password attempt");
+        String email = authentication.getName();
+        authService.changePassword(changePasswordRequest, email);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .build();
     }

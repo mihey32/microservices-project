@@ -1,6 +1,6 @@
 package com.ecommerce.auth_service.exceptions;
 
-public class InvalidRefreshTokenException extends RuntimeException {
+public class InvalidRefreshTokenException extends InvalidCredentialsException {
     public InvalidRefreshTokenException(String message) {
         super(message);
     }
