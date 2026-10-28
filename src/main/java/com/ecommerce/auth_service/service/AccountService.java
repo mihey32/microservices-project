@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -59,10 +60,6 @@ public class AccountService {
         return AccountMapper.mapToDto(signinAccount);
     }
 
-    public AccountDto oauthLogin(String oauth2Provider, String providerId, String email) {
-        return null;
-    }
-
     public Optional<AccountDto> findAccountById(Long id) {
         return accountRepository.findById(id).map(AccountMapper::mapToDto);
     }
@@ -106,6 +103,37 @@ public class AccountService {
             return false;
         }
         return passwordEncoder.matches(rawPassword, account.getPasswordHash());
+    }
+
+    @Transactional
+    public AccountDto provisionOAuthAccount(String provider, String providerId,
+                                            String email, boolean emailVerified) {
+        Objects.requireNonNull(email, "email for OAuth is null");
+        String normalizedEmail = normalizeEmail(email);
+        Optional<Account> accountOptional = accountRepository.findByOauth2ProviderAndOauth2ProviderId(provider, providerId);
+
+        if (accountOptional.isPresent()) {
+            return AccountMapper.mapToDto(accountOptional.get());
+        } else {
+            Optional<Account> signingAccountOptional = findByEmail(normalizedEmail);
+            if (signingAccountOptional.isEmpty()) {
+                Account createAccount = new Account();
+                createAccount.setEmail(normalizedEmail);
+                createAccount.setPasswordHash(null);
+                createAccount.setEmailVerified(emailVerified);
+                createAccount.setOauth2Provider(provider);
+                createAccount.setOauth2ProviderId(providerId);
+                createAccount.setRole(Role.ROLE_USER);
+                Account savedAccount = accountRepository.save(createAccount);
+                log.info("Account created by {} with providerId = {}: accountId={}",
+                        savedAccount.getOauth2Provider(), savedAccount.getOauth2ProviderId(), savedAccount.getId());
+                return AccountMapper.mapToDto(savedAccount);
+            }
+            var signingAccount = signingAccountOptional.get();
+            signingAccount.setOauth2Provider(provider);
+            signingAccount.setOauth2ProviderId(providerId);
+            return AccountMapper.mapToDto(signingAccount);
+        }
     }
 
 

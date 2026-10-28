@@ -1,8 +1,6 @@
 package com.ecommerce.auth_service.config;
 
-import com.ecommerce.auth_service.security.JsonAccessDeniedHandler;
-import com.ecommerce.auth_service.security.JsonAuthenticationEntryPoint;
-import com.ecommerce.auth_service.security.JwtAuthenticationFilter;
+import com.ecommerce.auth_service.security.*;
 import com.ecommerce.auth_service.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +18,8 @@ public class SecurityConfig {
     private final String[] publicEndpoints = {
             "/auth/register", "/auth/login", "/auth/refresh",
             "/auth/logout", "/auth/verify-email",
-            "/auth/forgot-password", "/auth/reset-password"
+            "/auth/forgot-password", "/auth/reset-password", "/oauth2/**",
+            "/login/oauth2/**"
     };
 
     private final String[] systemEndpoints = {"/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/error"};
@@ -34,7 +33,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtService jwtService,
                                            JsonAuthenticationEntryPoint authenticationEntryPoint,
-                                           JsonAccessDeniedHandler accessDeniedHandler) {
+                                           JsonAccessDeniedHandler accessDeniedHandler,
+                                           CustomOidcUserService customOidcUserService,
+                                           OAuth2AuthenticationSuccessHandler successHandler) {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -42,6 +43,9 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler(accessDeniedHandler))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(successHandler)
+                        .userInfoEndpoint(u -> u.oidcUserService(customOidcUserService)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicEndpoints).permitAll()
                         .requestMatchers(systemEndpoints).permitAll()

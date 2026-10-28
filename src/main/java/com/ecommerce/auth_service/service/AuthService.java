@@ -52,8 +52,13 @@ public class AuthService {
         log.info("Email verified: accountId={}", accountId);
     }
 
-    public AuthResponse oauthLogin(String oauth2Provider, String providerId, String email) {
-        return null;
+    public AuthResponse oauthLogin(AccountDto account) {
+        assertNotBlocked(account);
+        String accessToken = jwtService.generateToken(account);
+        String refreshToken = refreshTokenService.generateRefreshToken(account);
+
+        log.info("OAuth login success: accountId={}", account.id());
+        return new AuthResponse(account, refreshToken, accessToken);
     }
 
     @Transactional
