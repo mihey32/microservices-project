@@ -2,6 +2,7 @@ package com.ecommerce.auth_service.config;
 
 import com.ecommerce.auth_service.security.*;
 import com.ecommerce.auth_service.service.JwtService;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class SecurityConfig {
@@ -36,8 +38,12 @@ public class SecurityConfig {
                                            JsonAccessDeniedHandler accessDeniedHandler,
                                            CustomOidcUserService customOidcUserService,
                                            CustomOAuth2UserService customOAuth2UserService,
-                                           OAuth2AuthenticationSuccessHandler successHandler) {
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
+                                           OAuth2AuthenticationSuccessHandler successHandler,
+                                           ProxyManager<String> proxyManager,
+                                           ObjectMapper objectMapper) {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService);
+        RateLimitFilter rateLimitFilter = new RateLimitFilter(objectMapper, proxyManager);
+
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -53,7 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(publicEndpoints).permitAll()
                         .requestMatchers(systemEndpoints).permitAll()
                         .anyRequest().authenticated())
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 }
