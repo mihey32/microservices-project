@@ -141,6 +141,10 @@ public class AccountService {
         return accountRepository.findByEmail(normalizeEmail(email)).map(AccountMapper::mapToDto);
     }
 
+    public Optional<AccountDto> findByOauth2ProviderAndOauth2ProviderId(String provider, String providerId) {
+        return accountRepository.findByOauth2ProviderAndOauth2ProviderId(provider, providerId).map(AccountMapper::mapToDto);
+    }
+
 
     private Optional<Account> findByEmail(String email) {
         return accountRepository.findByEmail(email);

@@ -35,6 +35,7 @@ public class SecurityConfig {
                                            JsonAuthenticationEntryPoint authenticationEntryPoint,
                                            JsonAccessDeniedHandler accessDeniedHandler,
                                            CustomOidcUserService customOidcUserService,
+                                           CustomOAuth2UserService customOAuth2UserService,
                                            OAuth2AuthenticationSuccessHandler successHandler) {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
         return http
@@ -45,7 +46,9 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler(accessDeniedHandler))
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(successHandler)
-                        .userInfoEndpoint(u -> u.oidcUserService(customOidcUserService)))
+                        .userInfoEndpoint(u -> u
+                                .oidcUserService(customOidcUserService)
+                                .userService(customOAuth2UserService)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicEndpoints).permitAll()
                         .requestMatchers(systemEndpoints).permitAll()
