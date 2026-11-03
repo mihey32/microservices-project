@@ -1,13 +1,18 @@
 package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.dto.AccountDto;
+import com.ecommerce.auth_service.dto.EmailNotificationEvent;
+import com.ecommerce.auth_service.dto.UserCreatedEvent;
 import com.ecommerce.auth_service.dto.request.*;
 import com.ecommerce.auth_service.dto.AuthResponse;
 import com.ecommerce.auth_service.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Service
 @Slf4j
@@ -18,13 +23,31 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService resetService;
     private final EmailVerificationService emailVerificationService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
     public AccountDto register(RegisterRequest request) {
         AccountDto accountDto = accountService.register(request.email(), request.password());
         String verificationToken = emailVerificationService.generateVerificationToken(accountDto);
-        // TODO: publish user.created event to Kafka
-        log.debug("DEV ONLY - verification token for {} = {}", accountDto.id(), verificationToken);
+
+        UserCreatedEvent userCreatedEvent = new UserCreatedEvent(
+                accountDto.id(),
+                accountDto.email(),
+                verificationToken,
+                Instant.now()
+        );
+
+        kafkaTemplate.send("user.created", accountDto.id().toString(), userCreatedEvent)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Message has sent to kafka: topic={}, offset={}",
+                                result.getRecordMetadata().topic(),
+                                result.getRecordMetadata().offset());
+                    } else {
+                        log.error("Error sending to Kafka", ex);
+                    }
+                });
+
         return accountDto;
     }
 
@@ -118,8 +141,22 @@ public class AuthService {
                 .ifPresent(accountDto -> {
                     resetService.invalidatePreviousTokens(accountDto.id());
                     String rawToken = resetService.generateResetToken(accountDto);
-                    log.debug("DEV ONLY - reset token for {} = {}", accountDto.id(), rawToken);
-                    // TODO: publish event to Kafka
+                    EmailNotificationEvent event = new EmailNotificationEvent(
+                            accountDto.id(),
+                            accountDto.email(),
+                            rawToken,
+                            Instant.now()
+                    );
+                    kafkaTemplate.send("password.reset-requested", accountDto.id().toString(), event)
+                            .whenComplete((result, ex) -> {
+                                if (ex == null) {
+                                    log.info("Message has sent to kafka: topic={}, offset={}",
+                                            result.getRecordMetadata().topic(),
+                                            result.getRecordMetadata().offset());
+                                } else {
+                                    log.error("Error sending to Kafka", ex);
+                                }
+                            });
                 });
     }
 
