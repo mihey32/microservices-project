@@ -3,6 +3,8 @@ package com.ecommerce.auth_service;
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.exceptions.ConflictException;
 import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
+import com.ecommerce.auth_service.exceptions.InvalidResetTokenException;
+import com.ecommerce.auth_service.exceptions.InvalidVerificationTokenException;
 import com.ecommerce.auth_service.model.Role;
 import com.ecommerce.auth_service.repository.AccountRepository;
 import com.ecommerce.auth_service.service.AccountService;
@@ -75,10 +77,12 @@ public class AccountServiceTest extends AbstractIntegrationTest {
 
     @Test
     void provisionOAuthAccount_shouldCreateNewAccountIfNotExists() {
-        AccountDto result = accountService.provisionOAuthAccount("google", "12345", "oauth@mail.com", true);
+        String email = "oauth-" + UUID.randomUUID() + "@mail.com";
+
+        AccountDto result = accountService.provisionOAuthAccount("google", "12345", email, true);
 
         assertThat(result.id()).isNotNull();
-        assertThat(result.email()).isEqualTo("oauth@mail.com");
+        assertThat(result.email()).isEqualTo(email);
         assertThat(result.emailVerified()).isTrue();
 
         var saved = accountRepository.findById(result.id()).orElseThrow();
@@ -98,6 +102,47 @@ public class AccountServiceTest extends AbstractIntegrationTest {
         assertThat(saved.getOauth2ProviderId()).isEqualTo("999");
         assertThat(saved.getPasswordHash()).isNotNull();
     }
+
+    @Test
+    void changePassword_shouldReplaceHashAndAllowNewPassword() {
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+
+        accountService.changePassword(account.id(), "newPass12345");
+
+        assertThatThrownBy(() -> accountService.authenticate(account.email(), "qwerty1234"))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        AccountDto afterChange = accountService.authenticate(account.email(), "newPass12345");
+        assertThat(afterChange.email()).isEqualTo(normalizeEmail(email));
+    }
+
+    @Test
+    void changePassword_shouldThrowWhenAccountNotFound() {
+        assertThatThrownBy(() -> accountService.changePassword(Long.MAX_VALUE, "newPass12345"))
+                .isInstanceOf(InvalidResetTokenException.class)
+                .hasMessage("account not found");
+    }
+
+    @Test
+    void markEmailVerified_shouldSetEmailVerifiedToTrue() {
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+        assertThat(account.emailVerified()).isFalse();
+
+        accountService.markEmailVerified(account.id());
+
+        var saved = accountRepository.findById(account.id()).orElseThrow();
+        assertThat(saved.isEmailVerified()).isTrue();
+    }
+
+    @Test
+    void markEmailVerified_shouldThrowWhenAccountNotFound() {
+        assertThatThrownBy(() -> accountService.markEmailVerified(Long.MAX_VALUE))
+                .isInstanceOf(InvalidVerificationTokenException.class)
+                .hasMessage("account not found");
+    }
+
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
