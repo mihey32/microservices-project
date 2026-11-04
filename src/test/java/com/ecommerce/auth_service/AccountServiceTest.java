@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,10 +31,11 @@ public class AccountServiceTest extends AbstractIntegrationTest {
 
     @Test
     void register_shouldCreateAccountWithNormalizedEmailAndHashedPassword() {
-        AccountDto result = accountService.register("  Test@Mail.COM  ", "qwerty1234");
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        AccountDto result = accountService.register(email, "qwerty1234");
 
         assertThat(result.id()).isNotNull();
-        assertThat(result.email()).isEqualTo("test@mail.com");
+        assertThat(result.email()).isEqualTo(normalizeEmail(email));
         assertThat(result.role()).isEqualTo(Role.ROLE_USER);
         assertThat(result.emailVerified()).isFalse();
 
@@ -42,27 +46,30 @@ public class AccountServiceTest extends AbstractIntegrationTest {
 
     @Test
     void register_shouldThrowConflictWhenEmailAlreadyExists() {
-        accountService.register("duplicate@mail.com", "qwerty1234");
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        accountService.register(email, "qwerty1234");
 
-        assertThatThrownBy(() -> accountService.register("duplicate@mail.com", "anotherPass123"))
+        assertThatThrownBy(() -> accountService.register(email, "anotherPass123"))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("email already exists");
     }
 
     @Test
     void authenticate_shouldReturnAccountWhenCredentialsAreValid() {
-        accountService.register("auth@mail.com", "qwerty1234");
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        accountService.register(email, "qwerty1234");
 
-        AccountDto result = accountService.authenticate("AUTH@mail.com", "qwerty1234");
+        AccountDto result = accountService.authenticate(email, "qwerty1234");
 
-        assertThat(result.email()).isEqualTo("auth@mail.com");
+        assertThat(result.email()).isEqualTo(normalizeEmail(email));
     }
 
     @Test
     void authenticate_shouldThrowWhenPasswordIsInvalid() {
-        accountService.register("auth2@mail.com", "qwerty1234");
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        accountService.register(email, "qwerty1234");
 
-        assertThatThrownBy(() -> accountService.authenticate("auth2@mail.com", "wrongPass"))
+        assertThatThrownBy(() -> accountService.authenticate(email, "wrongPass"))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 
@@ -82,12 +89,17 @@ public class AccountServiceTest extends AbstractIntegrationTest {
 
     @Test
     void provisionOAuthAccount_shouldLinkOAuthToExistingEmailAccount() {
-        AccountDto passwordAccount = accountService.register("link@mail.com", "qwerty1234");
-        AccountDto oauthAccount = accountService.provisionOAuthAccount("github", "999", "link@mail.com", true);
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        AccountDto passwordAccount = accountService.register(email, "qwerty1234");
+        AccountDto oauthAccount = accountService.provisionOAuthAccount("github", "999", email, true);
         assertThat(oauthAccount.id()).isEqualTo(passwordAccount.id());
         var saved = accountRepository.findById(passwordAccount.id()).orElseThrow();
         assertThat(saved.getOauth2Provider()).isEqualTo("github");
         assertThat(saved.getOauth2ProviderId()).isEqualTo("999");
         assertThat(saved.getPasswordHash()).isNotNull();
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }

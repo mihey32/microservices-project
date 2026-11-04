@@ -5,32 +5,31 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest
-@Testcontainers
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer POSTGRES =
             new PostgreSQLContainer("postgres:18-alpine")
                     .withDatabaseName("auth-service-test-db")
                     .withUsername("test")
                     .withPassword("test");
 
-    @Container
     static final GenericContainer<?> REDIS =
             new GenericContainer<>("redis:7-alpine")
                     .withExposedPorts(6379);
 
-    @Container
     static final KafkaContainer KAFKA =
             new KafkaContainer("apache/kafka-native:3.8.0");
 
+    static {
+        POSTGRES.start();
+        REDIS.start();
+        KAFKA.start();
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
