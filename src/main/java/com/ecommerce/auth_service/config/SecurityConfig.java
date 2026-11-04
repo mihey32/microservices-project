@@ -24,7 +24,8 @@ public class SecurityConfig {
             "/login/oauth2/**"
     };
 
-    private final String[] systemEndpoints = {"/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/error"};
+    private final String[] systemEndpoints = {"/actuator/health", "/swagger-ui/**", "/swagger-ui.html",
+            "/v3/api-docs.yaml", "/v3/api-docs/**", "/error"};
 
     @Bean
     public PasswordEncoder passwordEncoder() {
