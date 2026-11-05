@@ -1,5 +1,6 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.exceptions.ConflictException;
 import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
@@ -7,7 +8,6 @@ import com.ecommerce.auth_service.exceptions.InvalidResetTokenException;
 import com.ecommerce.auth_service.exceptions.InvalidVerificationTokenException;
 import com.ecommerce.auth_service.model.Role;
 import com.ecommerce.auth_service.repository.AccountRepository;
-import com.ecommerce.auth_service.service.AccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;

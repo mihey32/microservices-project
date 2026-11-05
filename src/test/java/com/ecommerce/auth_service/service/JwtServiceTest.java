@@ -1,8 +1,7 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.model.Role;
-import com.ecommerce.auth_service.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

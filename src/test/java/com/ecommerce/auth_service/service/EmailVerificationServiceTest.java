@@ -1,8 +1,7 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.AccountDto;
-import com.ecommerce.auth_service.service.AccountService;
-import com.ecommerce.auth_service.service.EmailVerificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

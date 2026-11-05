@@ -1,10 +1,9 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.model.RefreshToken;
 import com.ecommerce.auth_service.repository.RefreshTokenRepository;
-import com.ecommerce.auth_service.service.AccountService;
-import com.ecommerce.auth_service.service.RefreshTokenService;
 import com.ecommerce.auth_service.util.TokenHasher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

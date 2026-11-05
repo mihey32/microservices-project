@@ -1,11 +1,11 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.AccountDto;
 import com.ecommerce.auth_service.dto.AuthResponse;
 import com.ecommerce.auth_service.dto.request.*;
 import com.ecommerce.auth_service.exceptions.*;
 import com.ecommerce.auth_service.repository.AccountRepository;
-import com.ecommerce.auth_service.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;

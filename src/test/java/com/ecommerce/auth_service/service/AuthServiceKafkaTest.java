@@ -1,11 +1,11 @@
-package com.ecommerce.auth_service;
+package com.ecommerce.auth_service.service;
 
+import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.EmailNotificationEvent;
 import com.ecommerce.auth_service.dto.UserCreatedEvent;
 import com.ecommerce.auth_service.dto.request.ForgotPasswordRequest;
 import com.ecommerce.auth_service.dto.request.RegisterRequest;
 import com.ecommerce.auth_service.exceptions.ConflictException;
-import com.ecommerce.auth_service.service.AuthService;
 import com.ecommerce.auth_service.util.KafkaTestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
