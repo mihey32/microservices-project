@@ -1,0 +1,27 @@
+
+
+
+
+qqqqq
+# Build
+target/
+build/
+out/
+*.class
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.secrets/
+*.pem
+*.key
