@@ -1,0 +1,33 @@
+# Build
+target/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# Docker (не нужны внутри образа)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+.secrets/
+
+# Docs
+*.md
+HELP.md
+
+# OS
+.DS_Store
+Thumbs.db
