@@ -5,7 +5,6 @@ import java.time.Instant;
 public record UserCreatedEvent(
         Long userId,
         String email,
-        String verificationToken,
         Instant createdAt
 ) {
 }

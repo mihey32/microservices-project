@@ -25,28 +25,19 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    @SuppressWarnings("LoggingSimilarMessage")
     @Transactional
     public AccountDto register(RegisterRequest request) {
         AccountDto accountDto = accountService.register(request.email(), request.password());
         String verificationToken = emailVerificationService.generateVerificationToken(accountDto);
 
-        UserCreatedEvent userCreatedEvent = new UserCreatedEvent(
-                accountDto.id(),
-                accountDto.email(),
-                verificationToken,
-                Instant.now()
-        );
+        UserCreatedEvent userCreatedEvent = new UserCreatedEvent(accountDto.id(), accountDto.email(), Instant.now());
 
-        kafkaTemplate.send("user.created", accountDto.id().toString(), userCreatedEvent)
-                .whenComplete((result, ex) -> {
-                    if (ex == null) {
-                        log.info("Message has sent to kafka: topic={}, offset={}",
-                                result.getRecordMetadata().topic(),
-                                result.getRecordMetadata().offset());
-                    } else {
-                        log.error("Error sending to Kafka", ex);
-                    }
-                });
+        EmailNotificationEvent notificationEvent = new EmailNotificationEvent(
+                accountDto.id(), accountDto.email(), verificationToken, Instant.now());
+
+        sendKafkaEvent("user.created", accountDto.id().toString(), userCreatedEvent);
+        sendKafkaEvent("email.verification-requested", accountDto.id().toString(), notificationEvent);
 
         return accountDto;
     }
@@ -147,16 +138,7 @@ public class AuthService {
                             rawToken,
                             Instant.now()
                     );
-                    kafkaTemplate.send("password.reset-requested", accountDto.id().toString(), event)
-                            .whenComplete((result, ex) -> {
-                                if (ex == null) {
-                                    log.info("Message has sent to kafka: topic={}, offset={}",
-                                            result.getRecordMetadata().topic(),
-                                            result.getRecordMetadata().offset());
-                                } else {
-                                    log.error("Error sending to Kafka", ex);
-                                }
-                            });
+                    sendKafkaEvent("password.reset-requested", accountDto.id().toString(), event);
                 });
     }
 
@@ -184,5 +166,16 @@ public class AuthService {
         }
     }
 
-
+    private void sendKafkaEvent(String topic, String key, Object event) {
+        kafkaTemplate.send(topic, key, event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Message sent to kafka: topic={}, offset={}",
+                                result.getRecordMetadata().topic(),
+                                result.getRecordMetadata().offset());
+                    } else {
+                        log.error("Error sending to Kafka topic={}", topic, ex);
+                    }
+                });
+    }
 }

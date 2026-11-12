@@ -55,7 +55,6 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
         UserCreatedEvent event = events.get(0);
         assertThat(event.userId()).isEqualTo(account.id());
         assertThat(event.email()).isEqualTo(email);
-        assertThat(event.verificationToken()).isNotBlank();
         assertThat(event.createdAt()).isNotNull();
     }
 
@@ -97,5 +96,21 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
         var events = readPasswordResetFor(email, 1, Duration.ofSeconds(3));
 
         assertThat(events).isEmpty();
+    }
+
+    @Test
+    void shouldPublishEmailVerificationEventWhenUserRegisters() {
+        String email = uniqueEmail("kafka-verify");
+
+        authService.register(new RegisterRequest(email, "Password123!"));
+
+        var events = KafkaTestUtils.readMessages(
+                bootstrapServers, "email.verification-requested", EmailNotificationEvent.class,
+                e -> e.email().equals(email), 1, Duration.ofSeconds(10));
+
+        assertThat(events).hasSize(1);
+        EmailNotificationEvent event = events.get(0);
+        assertThat(event.email()).isEqualTo(email);
+        assertThat(event.resetToken()).isNotBlank();
     }
 }
