@@ -6,21 +6,26 @@ import com.ecommerce.auth_service.exceptions.ConflictException;
 import com.ecommerce.auth_service.exceptions.EmailNotConfirmedException;
 import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.exception.ConstraintViolationException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = {
             EmailNotConfirmedException.class,
@@ -39,35 +44,7 @@ public class GlobalExceptionHandler {
                 .body(errorDto);
     }
 
-    @ExceptionHandler(value = {
-            MethodArgumentNotValidException.class,
-            ConstraintViolationException.class,
-            HttpMessageNotReadableException.class,
-            MissingServletRequestParameterException.class
-    })
-    public ResponseEntity<ErrorResponseDto> handleBadRequest(Exception e) {
-        String error = e.getMessage();
-
-        if (e instanceof MethodArgumentNotValidException ex) {
-            error = ex.getBindingResult().getFieldErrors().stream()
-                    .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-                    .collect(Collectors.joining("; "));
-        }
-
-        var errorDto = new ErrorResponseDto(
-                "Bad request",
-                error,
-                Instant.now()
-        );
-
-        log.warn("Bad request: {}", error);
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorDto);
-    }
-
-
-    @ExceptionHandler
+    @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponseDto> handleInvalidCredentialsException(InvalidCredentialsException e) {
         var errorDto = new ErrorResponseDto(
                 "Invalid credentials",
@@ -81,7 +58,7 @@ public class GlobalExceptionHandler {
                 .body(errorDto);
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponseDto> handleConflictException(ConflictException e) {
         var errorDto = new ErrorResponseDto(
                 "Conflict",
@@ -93,6 +70,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(errorDto);
+    }
+
+    @Override
+    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, @NonNull WebRequest request) {
+        String error = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        var errorDto = new ErrorResponseDto("Bad request", error, Instant.now());
+        log.warn("Bad request: {}", error);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDto);
+    }
+
+    @Override
+    protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, @NonNull HttpHeaders headers, HttpStatusCode status, @NonNull WebRequest request) {
+        var errorDto = new ErrorResponseDto(
+                "Bad request", ex.getMessage(), Instant.now());
+        log.warn("Bad request (not readable): {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDto);
+    }
+
+    @Override
+    protected @Nullable ResponseEntity<Object> handleMissingServletRequestParameter(MissingServletRequestParameterException ex, @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, @NonNull WebRequest request) {
+        var errorDto = new ErrorResponseDto(
+                "Bad request", ex.getMessage(), Instant.now());
+
+        log.warn("Bad request (missing param): {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDto);
     }
 
     @ExceptionHandler(Exception.class)
