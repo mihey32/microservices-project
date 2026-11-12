@@ -20,6 +20,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 @Transactional
 public class AuthControllerTest extends AbstractIntegrationTest {
@@ -285,4 +288,76 @@ public class AuthControllerTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus().isBadRequest();
     }
+
+    @Test
+    void unsupportedContentType_returns415() {
+        client.post().uri("/auth/login")
+                .contentType(MediaType.TEXT_PLAIN)
+                .bodyValue("not-json")
+                .exchange()
+                .expectStatus().isEqualTo(415);
+    }
+
+    @Test
+    void malformedJson_returns400() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not-valid-json"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void wrongMethod_returns405() {
+        client.get().uri("/auth/register")
+                .exchange()
+                .expectStatus().isEqualTo(405);
+    }
+
+
+    @Test
+    void register_cyrillicPassword_returns400() {
+        client.post().uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest(uniqueEmail(), "Пароль1234"))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void register_passwordOver72Bytes_returns400() {
+        client.post().uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest(uniqueEmail(), "a".repeat(73)))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void register_cyrillicPasswordOver72Bytes_returns400() {
+        // 40 × 'П' = 80 байт UTF-8 (каждый 2 байта) > 72
+        client.post().uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest(uniqueEmail(), "П".repeat(40)))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void register_forbiddenSpecialChar_returns400() {
+        client.post().uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest(uniqueEmail(), "Password123<"))
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void register_validPassword_returns201() {
+        client.post().uri("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest(uniqueEmail(), "Password123!"))
+                .exchange()
+                .expectStatus().isCreated();
+    }
+
 }
