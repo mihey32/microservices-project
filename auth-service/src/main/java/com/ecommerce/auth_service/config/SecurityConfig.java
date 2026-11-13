@@ -3,6 +3,7 @@ package com.ecommerce.auth_service.config;
 import com.ecommerce.auth_service.security.*;
 import com.ecommerce.auth_service.service.JwtService;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,6 +28,12 @@ public class SecurityConfig {
     private final String[] systemEndpoints = {"/actuator/health", "/swagger-ui/**", "/swagger-ui.html",
             "/v3/api-docs.yaml", "/v3/api-docs/**", "/error"};
 
+    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
+    private String googleClientId;
+
+    @Value("${spring.security.oauth2.client.registration.github.client-id:}")
+    private String githubClientId;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -45,23 +52,26 @@ public class SecurityConfig {
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService);
         RateLimitFilter rateLimitFilter = new RateLimitFilter(objectMapper, proxyManager);
 
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
+
+        http.csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler(accessDeniedHandler))
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(successHandler)
-                        .userInfoEndpoint(u -> u
-                                .oidcUserService(customOidcUserService)
-                                .userService(customOAuth2UserService)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicEndpoints).permitAll()
                         .requestMatchers(systemEndpoints).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
-                .build();
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
+
+        if (!googleClientId.isBlank() || !githubClientId.isBlank()) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .successHandler(successHandler)
+                    .userInfoEndpoint(u -> u
+                            .oidcUserService(customOidcUserService)
+                            .userService(customOAuth2UserService)));
+        }
+        return http.build();
     }
 }

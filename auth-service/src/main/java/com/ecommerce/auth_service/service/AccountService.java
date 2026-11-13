@@ -114,26 +114,37 @@ public class AccountService {
 
         if (accountOptional.isPresent()) {
             return AccountMapper.mapToDto(accountOptional.get());
-        } else {
-            Optional<Account> signingAccountOptional = findByEmail(normalizedEmail);
-            if (signingAccountOptional.isEmpty()) {
-                Account createAccount = new Account();
-                createAccount.setEmail(normalizedEmail);
-                createAccount.setPasswordHash(null);
-                createAccount.setEmailVerified(emailVerified);
-                createAccount.setOauth2Provider(provider);
-                createAccount.setOauth2ProviderId(providerId);
-                createAccount.setRole(Role.ROLE_USER);
-                Account savedAccount = accountRepository.save(createAccount);
-                log.info("Account created by {} with providerId = {}: accountId={}",
-                        savedAccount.getOauth2Provider(), savedAccount.getOauth2ProviderId(), savedAccount.getId());
-                return AccountMapper.mapToDto(savedAccount);
-            }
-            var signingAccount = signingAccountOptional.get();
-            signingAccount.setOauth2Provider(provider);
-            signingAccount.setOauth2ProviderId(providerId);
-            return AccountMapper.mapToDto(signingAccount);
         }
+
+        Optional<Account> signingAccountOptional = findByEmail(normalizedEmail);
+        if (signingAccountOptional.isEmpty()) {
+            Account createAccount = new Account();
+            createAccount.setEmail(normalizedEmail);
+            createAccount.setPasswordHash(null);
+            createAccount.setEmailVerified(emailVerified);
+            createAccount.setOauth2Provider(provider);
+            createAccount.setOauth2ProviderId(providerId);
+            createAccount.setRole(Role.ROLE_USER);
+            Account savedAccount = accountRepository.save(createAccount);
+            log.info("Account created by {} with providerId = {}: accountId={}",
+                    savedAccount.getOauth2Provider(), savedAccount.getOauth2ProviderId(), savedAccount.getId());
+            return AccountMapper.mapToDto(savedAccount);
+        }
+
+        var signingAccount = signingAccountOptional.get();
+        if (!emailVerified) {
+            log.warn("OAuth email not verified by provider, refusing to link. email={}, provider={}", normalizedEmail, provider);
+            throw new OAuthEmailNotVerifiedException("Email not verified by OAuth provider");
+        }
+
+        signingAccount.setOauth2Provider(provider);
+        signingAccount.setOauth2ProviderId(providerId);
+        signingAccount.setPasswordHash(null);
+        signingAccount.setEmailVerified(true);
+        accountRepository.save(signingAccount);
+
+        log.info("Linked OAuth provider {} to existing account: accountId={}, password reset", provider, signingAccount.getId());
+        return AccountMapper.mapToDto(signingAccount);
     }
 
 

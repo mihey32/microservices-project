@@ -2,10 +2,7 @@ package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.AbstractIntegrationTest;
 import com.ecommerce.auth_service.dto.AccountDto;
-import com.ecommerce.auth_service.exceptions.ConflictException;
-import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
-import com.ecommerce.auth_service.exceptions.InvalidResetTokenException;
-import com.ecommerce.auth_service.exceptions.InvalidVerificationTokenException;
+import com.ecommerce.auth_service.exceptions.*;
 import com.ecommerce.auth_service.model.Role;
 import com.ecommerce.auth_service.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
@@ -92,18 +89,6 @@ public class AccountServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void provisionOAuthAccount_shouldLinkOAuthToExistingEmailAccount() {
-        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
-        AccountDto passwordAccount = accountService.register(email, "qwerty1234");
-        AccountDto oauthAccount = accountService.provisionOAuthAccount("github", "999", email, true);
-        assertThat(oauthAccount.id()).isEqualTo(passwordAccount.id());
-        var saved = accountRepository.findById(passwordAccount.id()).orElseThrow();
-        assertThat(saved.getOauth2Provider()).isEqualTo("github");
-        assertThat(saved.getOauth2ProviderId()).isEqualTo("999");
-        assertThat(saved.getPasswordHash()).isNotNull();
-    }
-
-    @Test
     void changePassword_shouldReplaceHashAndAllowNewPassword() {
         String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
         AccountDto account = accountService.register(email, "qwerty1234");
@@ -141,6 +126,29 @@ public class AccountServiceTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> accountService.markEmailVerified(Long.MAX_VALUE))
                 .isInstanceOf(InvalidVerificationTokenException.class)
                 .hasMessage("account not found");
+    }
+
+    @Test
+    void provisionOAuthAccount_shouldLinkAndResetPasswordIfEmailVerified() {
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        AccountDto passwordAccount = accountService.register(email, "qwerty1234");
+
+        // OAuth провайдер подтвердил email (true)
+        AccountDto oauthAccount = accountService.provisionOAuthAccount("google", "123", email, true);
+
+        assertThat(oauthAccount.id()).isEqualTo(passwordAccount.id());
+        var saved = accountRepository.findById(passwordAccount.id()).orElseThrow();
+        assertThat(saved.getPasswordHash()).isNull();
+        assertThat(saved.getOauth2Provider()).isEqualTo("google");
+    }
+
+    @Test
+    void provisionOAuthAccount_shouldThrowIfOAuthEmailNotVerified() {
+        String email = "   Test-  " + UUID.randomUUID() + "@mail.com";
+        accountService.register(email, "qwerty1234");
+
+        assertThatThrownBy(() -> accountService.provisionOAuthAccount("google", "123", email, false))
+                .isInstanceOf(OAuthEmailNotVerifiedException.class);
     }
 
 
