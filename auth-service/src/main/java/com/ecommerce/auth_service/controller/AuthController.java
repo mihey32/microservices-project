@@ -110,9 +110,9 @@ public class AuthController {
 
     @Operation(summary = "Запрос на сброс пароля",
             description = """
-                       Публикует событие `password.reset-requested` в Kafka.
-                       Всегда возвращает 204 — независимо от того, существует ли email (защита от enumeration).
-                       """)
+                    Публикует событие `password.reset-requested` в Kafka.
+                    Всегда возвращает 204 — независимо от того, существует ли email (защита от enumeration).
+                    """)
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Запрос принят (email может и не существовать)"),
             @ApiResponse(responseCode = "400", description = "Ошибка валидации email",
@@ -158,6 +158,22 @@ public class AuthController {
         log.debug("Change password attempt");
         String email = authentication.getName();
         authService.changePassword(changePasswordRequest, email);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .build();
+    }
+
+    @Operation(summary = "Повторная отправка письма для подтверждения email")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Письмо отправлено повторно"),
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации"),
+            @ApiResponse(responseCode = "401", description = "Аккаунт не найден",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class), mediaType = ERR)),
+            @ApiResponse(responseCode = "409", description = "Email уже подтвержден",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class), mediaType = ERR))
+    })
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@RequestBody @Valid ForgotPasswordRequest request) {
+        authService.resendVerificationEmail(request.email());
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .build();
     }

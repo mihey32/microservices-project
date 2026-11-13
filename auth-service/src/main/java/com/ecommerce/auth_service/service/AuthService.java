@@ -8,7 +8,6 @@ import com.ecommerce.auth_service.dto.AuthResponse;
 import com.ecommerce.auth_service.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +22,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService resetService;
     private final EmailVerificationService emailVerificationService;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxService outboxService;
 
     @SuppressWarnings("LoggingSimilarMessage")
     @Transactional
@@ -36,8 +35,9 @@ public class AuthService {
         EmailNotificationEvent notificationEvent = new EmailNotificationEvent(
                 accountDto.id(), accountDto.email(), verificationToken, Instant.now());
 
-        sendKafkaEvent("user.created", accountDto.id().toString(), userCreatedEvent);
-        sendKafkaEvent("email.verification-requested", accountDto.id().toString(), notificationEvent);
+        outboxService.saveEvent("Account", accountDto.id().toString(), "user.created", userCreatedEvent);
+        outboxService.saveEvent("Account", accountDto.id().toString(), "email.verification-requested", notificationEvent);
+
 
         return accountDto;
     }
@@ -64,6 +64,25 @@ public class AuthService {
                 });
         accountService.markEmailVerified(accountId);
         log.info("Email verified: accountId={}", accountId);
+    }
+
+    @Transactional
+    public void resendVerificationEmail(String email) {
+        AccountDto account = accountService.findAccountByEmail(email)
+                .orElseThrow(() -> new InvalidCredentialsException("account not found"));
+
+        if (account.emailVerified()) {
+            throw new ConflictException("email already verified");
+        }
+
+        emailVerificationService.invalidatePreviousTokens(account.id());
+        String verificationToken = emailVerificationService.generateVerificationToken(account);
+
+        EmailNotificationEvent event = new EmailNotificationEvent(
+                account.id(), account.email(), verificationToken, Instant.now());
+        outboxService.saveEvent("Account", account.id().toString(), "email.verification-requested", event);
+
+        log.info("Resent verification email for accountId={}", account.id());
     }
 
     public AuthResponse oauthLogin(AccountDto account) {
@@ -138,7 +157,8 @@ public class AuthService {
                             rawToken,
                             Instant.now()
                     );
-                    sendKafkaEvent("password.reset-requested", accountDto.id().toString(), event);
+                    outboxService.saveEvent("Account", accountDto.id().toString(), "password.reset-requested", event);
+
                 });
     }
 
@@ -166,16 +186,4 @@ public class AuthService {
         }
     }
 
-    private void sendKafkaEvent(String topic, String key, Object event) {
-        kafkaTemplate.send(topic, key, event)
-                .whenComplete((result, ex) -> {
-                    if (ex == null) {
-                        log.info("Message sent to kafka: topic={}, offset={}",
-                                result.getRecordMetadata().topic(),
-                                result.getRecordMetadata().offset());
-                    } else {
-                        log.error("Error sending to Kafka topic={}", topic, ex);
-                    }
-                });
-    }
 }

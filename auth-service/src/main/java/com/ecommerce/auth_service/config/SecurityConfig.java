@@ -21,7 +21,7 @@ public class SecurityConfig {
             "/auth/register", "/auth/login", "/auth/refresh",
             "/auth/logout", "/auth/verify-email",
             "/auth/forgot-password", "/auth/reset-password", "/oauth2/**",
-            "/login/oauth2/**"
+            "/login/oauth2/**", "/auth/resend-verification"
     };
 
     private final String[] systemEndpoints = {"/actuator/health", "/swagger-ui/**", "/swagger-ui.html",
