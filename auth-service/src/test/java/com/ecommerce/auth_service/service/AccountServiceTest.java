@@ -151,6 +151,67 @@ public class AccountServiceTest extends AbstractIntegrationTest {
                 .isInstanceOf(OAuthEmailNotVerifiedException.class);
     }
 
+    @Test
+    void changeRole_shouldUpdateRole() {
+        String email = "role-" + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+
+        AccountDto updated = accountService.changeRole(account.id(), Role.ROLE_MANAGER);
+
+        assertThat(updated.role()).isEqualTo(Role.ROLE_MANAGER);
+        assertThat(accountRepository.findById(account.id()).orElseThrow().getRole())
+                .isEqualTo(Role.ROLE_MANAGER);
+    }
+
+    @Test
+    void changeRole_shouldBeIdempotentWhenSameRole() {
+        String email = "role-idem-" + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+        accountService.changeRole(account.id(), Role.ROLE_ADMIN);
+
+        AccountDto again = accountService.changeRole(account.id(), Role.ROLE_ADMIN);
+
+        assertThat(again.role()).isEqualTo(Role.ROLE_ADMIN);
+    }
+
+    @Test
+    void changeRole_shouldThrowWhenAccountNotFound() {
+        assertThatThrownBy(() -> accountService.changeRole(Long.MAX_VALUE, Role.ROLE_ADMIN))
+                .isInstanceOf(AccountNotFoundException.class)
+                .hasMessage("account not found");
+    }
+
+    @Test
+    void setBlocked_shouldUpdateStatus() {
+        String email = "block-" + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+        assertThat(account.blocked()).isFalse();
+
+        AccountDto blocked = accountService.setBlocked(account.id(), true);
+        assertThat(blocked.blocked()).isTrue();
+
+        AccountDto unblocked = accountService.setBlocked(account.id(), false);
+        assertThat(unblocked.blocked()).isFalse();
+    }
+
+    @Test
+    void setBlocked_shouldBeIdempotent() {
+        String email = "block-idem-" + UUID.randomUUID() + "@mail.com";
+        AccountDto account = accountService.register(email, "qwerty1234");
+
+        accountService.setBlocked(account.id(), true);
+        AccountDto again = accountService.setBlocked(account.id(), true);
+
+        assertThat(again.blocked()).isTrue();
+    }
+
+    @Test
+    void setBlocked_shouldThrowWhenAccountNotFound() {
+        assertThatThrownBy(() -> accountService.setBlocked(Long.MAX_VALUE, true))
+                .isInstanceOf(AccountNotFoundException.class)
+                .hasMessage("account not found");
+    }
+
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
