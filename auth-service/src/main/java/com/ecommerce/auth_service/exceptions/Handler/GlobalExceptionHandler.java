@@ -1,10 +1,7 @@
 package com.ecommerce.auth_service.exceptions.Handler;
 
 import com.ecommerce.auth_service.dto.ErrorResponseDto;
-import com.ecommerce.auth_service.exceptions.AccountBlockedException;
-import com.ecommerce.auth_service.exceptions.ConflictException;
-import com.ecommerce.auth_service.exceptions.EmailNotConfirmedException;
-import com.ecommerce.auth_service.exceptions.InvalidCredentialsException;
+import com.ecommerce.auth_service.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -72,6 +69,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(errorDto);
     }
 
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccountNotFound(AccountNotFoundException e) {
+        var errorDto = new ErrorResponseDto("Not found", e.getMessage(), Instant.now());
+        log.warn("Account not found: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDto);
+    }
+
     @Override
     protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, @NonNull WebRequest request) {
         String error = ex.getBindingResult().getFieldErrors().stream()
@@ -83,7 +87,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, @NonNull HttpHeaders headers, HttpStatusCode status, @NonNull WebRequest request) {
+    protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, @NonNull HttpHeaders headers, @NonNull HttpStatusCode status, @NonNull WebRequest request) {
         var errorDto = new ErrorResponseDto(
                 "Bad request", ex.getMessage(), Instant.now());
         log.warn("Bad request (not readable): {}", ex.getMessage());

@@ -156,6 +156,40 @@ public class AccountService {
         return accountRepository.findByOauth2ProviderAndOauth2ProviderId(provider, providerId).map(AccountMapper::mapToDto);
     }
 
+    @Transactional
+    public AccountDto changeRole(Long accountId, Role newRole) {
+        Account account = getAccountByIdForAdmin(accountId);
+        if (account.getRole() == newRole) {
+            log.debug("Role already {} for accountId={}", newRole, accountId);
+            return AccountMapper.mapToDto(account);
+        }
+
+        account.setRole(newRole);
+        log.debug("Role changed: accountId={}, newRole={}", accountId, newRole);
+        return AccountMapper.mapToDto(account);
+    }
+
+    @Transactional
+    public AccountDto setBlocked(Long accountId, boolean blocked) {
+        Account account = getAccountByIdForAdmin(accountId);
+        if (account.isBlocked() == blocked) {
+            log.debug("Blocked already {} for accountId={}", blocked, accountId);
+            return AccountMapper.mapToDto(account);
+        }
+
+        account.setBlocked(blocked);
+        log.debug("Block status changed: accountId={}, blocked={}", accountId, blocked);
+        return AccountMapper.mapToDto(account);
+    }
+
+    private Account getAccountByIdForAdmin(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> {
+                    log.debug("Account not found: accountId={}", accountId);
+                    return new AccountNotFoundException("account not found");
+                });
+    }
+
 
     private Optional<Account> findByEmail(String email) {
         return accountRepository.findByEmail(email);
