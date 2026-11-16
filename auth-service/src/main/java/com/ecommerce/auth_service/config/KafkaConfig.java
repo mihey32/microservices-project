@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import org.apache.avro.specific.SpecificRecord;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,13 +23,29 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${spring.kafka.producer.properties.schema.registry.url:}")
+    private String schemaRegistryUrl;
+
     @Bean
-    public KafkaTemplate<String, String> stringkafkaTemplate() {
+    public KafkaTemplate<String, String> stringKafkaTemplate() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         ProducerFactory<String, String> producerFactory = new DefaultKafkaProducerFactory<>(configProps);
+        return new KafkaTemplate<>(producerFactory);
+    }
+
+    @Bean
+    public KafkaTemplate<String, SpecificRecord> avroKafkaTemplate() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+        configProps.put("schema.registry.url", schemaRegistryUrl);
+        configProps.put("auto.register.schemas", true);
+        configProps.put("use.latest.version", false);
+        ProducerFactory<String, SpecificRecord> producerFactory = new DefaultKafkaProducerFactory<>(configProps);
         return new KafkaTemplate<>(producerFactory);
     }
 

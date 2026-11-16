@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "EmailNotificationEvent",
+  "namespace": "com.ecommerce.avro",
+  "fields": [
+    {"name": "userId",     "type": "long"},
+    {"name": "email",      "type": "string"},
+    {"name": "resetToken", "type": "string"},
+    {"name": "createdAt",  "type": "long", "doc": "epoch millis UTC"}
+  ]
+}

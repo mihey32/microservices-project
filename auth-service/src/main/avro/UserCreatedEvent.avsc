@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "UserCreatedEvent",
+  "namespace": "com.ecommerce.avro",
+  "fields": [
+    {"name": "userId",    "type": "long"},
+    {"name": "email",     "type": "string"},
+    {"name": "createdAt", "type": "long", "doc": "epoch millis UTC"}
+  ]
+}
