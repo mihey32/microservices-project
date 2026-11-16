@@ -33,11 +33,14 @@ services:
         condition: service_healthy
       mailhog:
         condition: service_started
+      schema-registry:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/auth-service-db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_PRODUCER_PROPERTIES_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       SPRING_DATA_REDIS_HOST: redis
       SPRING_MAIL_HOST: mailhog
       SPRING_PROFILES_ACTIVE: dev
@@ -88,6 +91,24 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.8.0
+    container_name: auth_service_schema_registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/subjects" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
