@@ -8,8 +8,11 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
 
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -29,9 +32,10 @@ public abstract class AbstractIntegrationTest {
                     .withExposedPorts(6379);
 
     static final KafkaContainer KAFKA =
-            new KafkaContainer("apache/kafka-native:3.8.0")
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.8.0"))
                     .withNetwork(NETWORK)
-                    .withNetworkAliases("kafka");
+                    .withNetworkAliases("kafka")
+                    .withStartupTimeout(Duration.ofMinutes(3));
 
     static final GenericContainer<?> SCHEMA_REGISTRY =
             new GenericContainer<>("confluentinc/cp-schema-registry:7.8.0")
@@ -40,7 +44,13 @@ public abstract class AbstractIntegrationTest {
                     .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
                     .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://kafka:9092")
                     .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
-                    .waitingFor(Wait.forHttp("/subjects").forStatusCode(200));
+                    .withEnv("SCHEMA_REGISTRY_KAFKASTORE_TIMEOUT_MS", "30000")
+                    .withEnv("SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL", "none")
+                    .waitingFor(
+                            Wait.forHttp("/subjects")
+                                    .forPort(8081)
+                                    .forStatusCode(200)
+                                    .withStartupTimeout(Duration.ofMinutes(3)));
 
     static {
         POSTGRES.start();

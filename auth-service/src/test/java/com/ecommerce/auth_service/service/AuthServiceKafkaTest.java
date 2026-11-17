@@ -1,8 +1,8 @@
 package com.ecommerce.auth_service.service;
 
 import com.ecommerce.auth_service.AbstractIntegrationTest;
-import com.ecommerce.auth_service.dto.EmailNotificationEvent;
-import com.ecommerce.auth_service.dto.UserCreatedEvent;
+import com.ecommerce.avro.EmailNotificationEvent;
+import com.ecommerce.avro.UserCreatedEvent;
 import com.ecommerce.auth_service.dto.request.ForgotPasswordRequest;
 import com.ecommerce.auth_service.dto.request.RegisterRequest;
 import com.ecommerce.auth_service.exceptions.ConflictException;
@@ -27,16 +27,19 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${spring.kafka.producer.properties.schema.registry.url}")
+    private String schemaRegistryUrl;
+
     private List<UserCreatedEvent> readUserCreatedFor(String email, int expectedCount, Duration timeout) {
         return KafkaTestUtils.readMessages(
-                bootstrapServers, "user.created", UserCreatedEvent.class,
-                e -> e.email().equals(email), expectedCount, timeout);
+                bootstrapServers, schemaRegistryUrl, "user.created", UserCreatedEvent.class,
+                e -> e.getEmail().equals(email), expectedCount, timeout);
     }
 
     private List<EmailNotificationEvent> readPasswordResetFor(String email, int expectedCount, Duration timeout) {
         return KafkaTestUtils.readMessages(
-                bootstrapServers, "password.reset-requested", EmailNotificationEvent.class,
-                e -> e.email().equals(email), expectedCount, timeout);
+                bootstrapServers, schemaRegistryUrl, "password.reset-requested", EmailNotificationEvent.class,
+                e -> e.getEmail().equals(email), expectedCount, timeout);
     }
 
     private String uniqueEmail(String prefix) {
@@ -49,13 +52,13 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
 
         var account = authService.register(new RegisterRequest(email, "Password123!"));
 
-        var events = readUserCreatedFor(email, 1, Duration.ofSeconds(10));
+        var events = readUserCreatedFor(email, 1, Duration.ofSeconds(30));
 
         assertThat(events).hasSize(1);
         UserCreatedEvent event = events.get(0);
-        assertThat(event.userId()).isEqualTo(account.id());
-        assertThat(event.email()).isEqualTo(email);
-        assertThat(event.createdAt()).isNotNull();
+        assertThat(event.getUserId()).isEqualTo(account.id());
+        assertThat(event.getEmail()).isEqualTo(email);
+        assertThat(event.getCreatedAt()).isPositive();
     }
 
     @Test
@@ -66,7 +69,7 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> authService.register(new RegisterRequest(email, "Password123!")))
                 .isInstanceOf(ConflictException.class);
 
-        var events = readUserCreatedFor(email, 2, Duration.ofSeconds(5));
+        var events = readUserCreatedFor(email, 2, Duration.ofSeconds(30));
 
         assertThat(events).hasSize(1);
     }
@@ -78,13 +81,13 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
 
         authService.forgotPassword(new ForgotPasswordRequest(email));
 
-        var events = readPasswordResetFor(email, 1, Duration.ofSeconds(10));
+        var events = readPasswordResetFor(email, 1, Duration.ofSeconds(30));
 
         assertThat(events).hasSize(1);
         EmailNotificationEvent event = events.get(0);
-        assertThat(event.email()).isEqualTo(email);
-        assertThat(event.resetToken()).isNotBlank();
-        assertThat(event.createdAt()).isNotNull();
+        assertThat(event.getEmail()).isEqualTo(email);
+        assertThat(event.getResetToken()).isNotBlank();
+        assertThat(event.getCreatedAt()).isPositive();
     }
 
     @Test
@@ -93,7 +96,7 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
 
         authService.forgotPassword(new ForgotPasswordRequest(email));
 
-        var events = readPasswordResetFor(email, 1, Duration.ofSeconds(3));
+        var events = readPasswordResetFor(email, 1, Duration.ofSeconds(30));
 
         assertThat(events).isEmpty();
     }
@@ -105,12 +108,12 @@ public class AuthServiceKafkaTest extends AbstractIntegrationTest {
         authService.register(new RegisterRequest(email, "Password123!"));
 
         var events = KafkaTestUtils.readMessages(
-                bootstrapServers, "email.verification-requested", EmailNotificationEvent.class,
-                e -> e.email().equals(email), 1, Duration.ofSeconds(10));
+                bootstrapServers, schemaRegistryUrl, "email.verification-requested", EmailNotificationEvent.class,
+                e -> e.getEmail().equals(email), 1, Duration.ofSeconds(30));
 
         assertThat(events).hasSize(1);
         EmailNotificationEvent event = events.get(0);
-        assertThat(event.email()).isEqualTo(email);
-        assertThat(event.resetToken()).isNotBlank();
+        assertThat(event.getEmail()).isEqualTo(email);
+        assertThat(event.getResetToken()).isNotBlank();
     }
 }
